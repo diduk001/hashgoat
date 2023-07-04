@@ -14,6 +14,12 @@
 
 `hashgoat -w path-to-wordlist -a hashing-algorithm [-t number-of-threads] unknown-hash`
 
+Currently implemented hashing algorithms:
+- MD5 (`md5`)
+- SHA1 (`sha1`)
+- SHA256 (`sha256`)
+- SHA512 (`sha512`)
+
 ## Examples
 
 ```
@@ -25,13 +31,15 @@ hashgoat -w wordlist.txt -t 1 -a sha256 4e6dc79b64c40a1d2867c7e26e7856404db2a97c
 
 ## TODO
 
-✅ Add basic hash algorithms
+✅ Add basic hash algorithms (MD5, SHA1, SHA256, SHA512)
 
-⬜ Add test and coverage
+⬜ Add coverage
 
-⬜ Add benchmark
+⬜ Add progress bar
 
 ⬜ Add automatic hash detection with regular expressions
+
+⬜ Add benchmark
 
 ⬜ Add searching by mask
 

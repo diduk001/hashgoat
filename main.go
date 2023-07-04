@@ -14,8 +14,9 @@ import (
 
 func main() {
 	wordlistPtr := flag.String("w", "", "Path to wordlist")
-	threadsCntPtr := flag.Int("t", 5, "Number of threadsCnt")
+	threadsCntPtr := flag.Int("t", 10, "Number of threadsCnt")
 	hashAlgoPtr := flag.String("a", "", "Hashing algorithm (md5/sha1/sha256/sha512)")
+	flag.Usage = printExample // Override standard usage
 	flag.Parse()
 
 	unknownHash := flag.Arg(0)
@@ -58,6 +59,8 @@ func main() {
 		panic(err)
 		return
 	}
+
+	fmt.Printf("hashgoat - trying to recover %s\n", unknownHash)
 	numLines := len(lines)
 
 	hashPairs := make(chan pair)     // contains pairs {plain string, hashed string}
@@ -107,7 +110,8 @@ func printExample() {
 	fmt.Println("Example:")
 	fmt.Println("hashgoat -w wordlist.txt -a md5 dac0d8a5cf48040d1bb724ea18a4f103")
 	fmt.Println("hashgoat -w wordlist.txt -t 1 -a sha256 4e6dc79b64c40a1d2867c7e26e7856404db2a97c1d5854c3b3ae5c6098a61c62")
-
+	fmt.Println()
+	fmt.Println("More info: https://github.com/diduk001/hashgoat")
 }
 
 func hashSlice(wordlist []string, wg *sync.WaitGroup, pairs chan<- pair, done <-chan string, hashFunc func(string) string) {
