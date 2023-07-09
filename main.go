@@ -27,6 +27,12 @@ func main() {
 		return
 	}
 
+	if *threadsCntPtr <= 0 {
+		fmt.Println("Threads count must be not less than 0")
+		printExample()
+		return
+	}
+
 	var hashAlgo func(string) string // Hashing algorithm
 	switch *hashAlgoPtr {
 	case "":
@@ -61,6 +67,24 @@ func main() {
 	}
 
 	fmt.Printf("hashgoat - trying to recover %s\n", unknownHash)
+
+	isFound, result := recoverHash(lines, *threadsCntPtr, hashAlgo, unknownHash)
+	if isFound {
+		fmt.Printf("Result: %s\n", result)
+	} else {
+		fmt.Println("Hash not found! Try another wordlist (-w) or hash algorithm (-a)")
+	}
+}
+
+func printExample() {
+	fmt.Println("Example:")
+	fmt.Println("hashgoat -w wordlist.txt -a md5 dac0d8a5cf48040d1bb724ea18a4f103")
+	fmt.Println("hashgoat -w wordlist.txt -t 1 -a sha256 4e6dc79b64c40a1d2867c7e26e7856404db2a97c1d5854c3b3ae5c6098a61c62")
+	fmt.Println()
+	fmt.Println("More info: https://github.com/diduk001/hashgoat")
+}
+
+func recoverHash(lines []string, threadsCnt int, hashAlgo func(string) string, unknownHash string) (bool, string) {
 	numLines := len(lines)
 
 	hashPairs := make(chan pair)     // contains pairs {plain string, hashed string}
@@ -68,7 +92,6 @@ func main() {
 	isDone := make(chan string)      // closes when wait group is ready
 	var wg sync.WaitGroup
 
-	threadsCnt := *threadsCntPtr
 	chunkSize := numLines / threadsCnt // Chunk is a slice of wordlist. Each thread operates with a chunk
 	for i := 0; i < threadsCnt; i++ {
 		wg.Add(1)
@@ -100,18 +123,10 @@ func main() {
 
 	select {
 	case result := <-foundString: // if foundString contains something
-		fmt.Printf("Result: %s\n", result)
+		return true, result
 	case <-isDone: // if done before foundString contains something
-		fmt.Println("Hash not found! Try another wordlist (-w) or hash algorithm (-a)")
+		return false, ""
 	}
-}
-
-func printExample() {
-	fmt.Println("Example:")
-	fmt.Println("hashgoat -w wordlist.txt -a md5 dac0d8a5cf48040d1bb724ea18a4f103")
-	fmt.Println("hashgoat -w wordlist.txt -t 1 -a sha256 4e6dc79b64c40a1d2867c7e26e7856404db2a97c1d5854c3b3ae5c6098a61c62")
-	fmt.Println()
-	fmt.Println("More info: https://github.com/diduk001/hashgoat")
 }
 
 func hashSlice(wordlist []string, wg *sync.WaitGroup, pairs chan<- pair, done <-chan string, hashFunc func(string) string) {
