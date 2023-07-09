@@ -84,15 +84,30 @@ func printExample() {
 	fmt.Println("More info: https://github.com/diduk001/hashgoat")
 }
 
-func recoverHash(lines []string, threadsCnt int, hashAlgo func(string) string, unknownHash string) (bool, string) {
+func recoverHash(lines []string, threadsCnt int, hashFunction func(string) string, unknownHash string) (bool, string) {
 	numLines := len(lines)
+
+	if numLines == 0 {
+		return false, ""
+	} else if numLines == 1 {
+		line := lines[0]
+		hash := hashFunction(line)
+		if hash == unknownHash {
+			return true, line
+		}
+		return false, ""
+	}
 
 	hashPairs := make(chan pair)     // contains pairs {plain string, hashed string}
 	foundString := make(chan string) // contains found plain string (if found any)
-	isDone := make(chan string)      // closes when wait group is ready
+	isDone := make(chan struct{})    // closes when wait group is ready
 	var wg sync.WaitGroup
 
-	chunkSize := numLines / threadsCnt // Chunk is a slice of wordlist. Each thread operates with a chunk
+	chunkSize := (numLines + threadsCnt - 1) / threadsCnt // Chunk is a slice of wordlist. Each thread operates with a chunk
+	if chunkSize < 1 {
+		chunkSize = 1
+	}
+
 	for i := 0; i < threadsCnt; i++ {
 		wg.Add(1)
 
@@ -102,7 +117,7 @@ func recoverHash(lines []string, threadsCnt int, hashAlgo func(string) string, u
 			sliceEnd = numLines
 		}
 		slice := lines[sliceStart:sliceEnd]
-		go hashSlice(slice, &wg, hashPairs, isDone, hashAlgo) // Start hashing goroutine
+		go hashSlice(slice, &wg, hashPairs, isDone, hashFunction) // Start hashing goroutine
 	}
 
 	// Checks if there is a hash equal to user's input in hashPairs
@@ -129,10 +144,15 @@ func recoverHash(lines []string, threadsCnt int, hashAlgo func(string) string, u
 	}
 }
 
-func hashSlice(wordlist []string, wg *sync.WaitGroup, pairs chan<- pair, done <-chan string, hashFunc func(string) string) {
+// Put pairs {hashed, plain} for passed hashFunction into pairs channel until all lines from slice is hashed or done channel is closed
+func hashSlice(wordlist []string, wg *sync.WaitGroup, pairs chan<- pair, done <-chan struct{}, hashFunction func(string) string) {
 	defer wg.Done()
+	if len(wordlist) == 0 {
+		return
+	}
+
 	for _, line := range wordlist {
-		hash := hashFunc(line)
+		hash := hashFunction(line)
 		select {
 		case pairs <- pair{line, hash}:
 		case <-done:
