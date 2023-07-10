@@ -111,7 +111,7 @@ func recoverHash(
 	isDone := make(chan struct{})    // closes when wait group is ready
 	var wg sync.WaitGroup
 
-	chunkSize := (numLines + threadsCnt - 1) / threadsCnt // Chunk is a slice of wordlist. Each thread operates with a chunk
+	chunkSize := numLines / threadsCnt // Chunk is a slice of wordlist. Each thread operates with a chunk
 	if chunkSize < 1 {
 		chunkSize = 1
 	}
