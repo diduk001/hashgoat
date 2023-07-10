@@ -33,7 +33,9 @@ hashgoat -w wordlist.txt -t 1 -a sha256 4e6dc79b64c40a1d2867c7e26e7856404db2a97c
 
 ✅ Add basic hash algorithms (MD5, SHA1, SHA256, SHA512)
 
-⬜ Add coverage
+⬜ Add unit tests (IN PROGRESS)
+
+⬜ Add asynchronous I/O
 
 ⬜ Add progress bar
 
