@@ -62,7 +62,25 @@ func TestHashNotFoundMD5(t *testing.T) {
 	hash := "e1671797c52e15f763380b45e841ec32" // md5("e")
 	isFound, result := recoverHash(wordlist, 1, prettyMD5, hash)
 	if isFound || result != "" {
-		t.Errorf("Found hash which is not in wordlist. Requested hash - %s, result - %s", hash, result)
+		t.Errorf(
+			"Found hash which is not in wordlist. Requested hash - %s, result - %s",
+			hash,
+			result,
+		)
+	}
+}
+
+func TestHashNotFoundSHA1(t *testing.T) {
+	wordlist := []string{"a", "b", "c", "d"}
+
+	hash := "58e6b3a414a1e090dfc6029add0f3555ccba127f" // sha1("e")
+	isFound, result := recoverHash(wordlist, 1, prettyMD5, hash)
+	if isFound || result != "" {
+		t.Errorf(
+			"Found hash which is not in wordlist. Requested hash - %s, result - %s",
+			hash,
+			result,
+		)
 	}
 }
 
