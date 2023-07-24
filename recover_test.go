@@ -4,30 +4,62 @@ import (
 	"testing"
 )
 
-func TestOneWordMD5(t *testing.T) {
-	wordlist := []string{"test_md5"}
+func TestMD5(t *testing.T) {
+	t.Run("TestOneWordMD5", func(t *testing.T) {
+		wordlist := []string{"test_md5"}
 
-	wanted := wordlist[0]
-	hash := "9050bddcf415f2d0518804e551c1be98"
-	isFound, result := recoverHash(wordlist, 1, prettyMD5, hash)
-	if !isFound {
-		t.Errorf("Not found MD5 hash %s in wordlist. Plaintest is %s", hash, wanted)
-	} else if result != wanted {
-		t.Errorf("Wrong plaintext for MD5 hash. Got %s, wanted %s, hash - %s", result, wanted, hash)
-	}
+		wanted := wordlist[0]
+		hash := "9050bddcf415f2d0518804e551c1be98"
+		isFound, result := recoverHash(wordlist, 1, prettyMD5, hash)
+		if !isFound {
+			t.Errorf("Not found MD5 hash %s in wordlist. Plaintest is %s", hash, wanted)
+		} else if result != wanted {
+			t.Errorf("Wrong plaintext for MD5 hash. Got %s, wanted %s, hash - %s", result, wanted, hash)
+		}
+	})
+
+	t.Run("TestHashNotFoundMD5", func(t *testing.T) {
+		wordlist := []string{"a", "b", "c", "d"}
+
+		hash := "e1671797c52e15f763380b45e841ec32" // md5("e")
+		isFound, result := recoverHash(wordlist, 1, prettyMD5, hash)
+		if isFound || result != "" {
+			t.Errorf(
+				"Found hash which is not in wordlist. Requested hash - %s, result - %s",
+				hash,
+				result,
+			)
+		}
+	})
 }
 
-func TestOneWordSHA1(t *testing.T) {
-	wordlist := []string{"test_sha1"}
+func TestSHA1(t *testing.T) {
+	t.Run("TestOneWordSHA1", func(t *testing.T) {
+		wordlist := []string{"test_sha1"}
 
-	wanted := wordlist[0]
-	hash := "9db4507552981975bccac89a41dab2cc821bff2e"
-	isFound, result := recoverHash(wordlist, 1, prettySHA1, hash)
-	if !isFound {
-		t.Errorf("Not found SHA1 hash %s in wordlist. Plaintest is %s", hash, wanted)
-	} else if result != wanted {
-		t.Errorf("Wrong plaintext for SHA1 hash. Got %s, wanted %s, hash - %s", result, wanted, hash)
-	}
+		wanted := wordlist[0]
+		hash := "9db4507552981975bccac89a41dab2cc821bff2e"
+		isFound, result := recoverHash(wordlist, 1, prettySHA1, hash)
+		if !isFound {
+			t.Errorf("Not found SHA1 hash %s in wordlist. Plaintest is %s", hash, wanted)
+		} else if result != wanted {
+			t.Errorf("Wrong plaintext for SHA1 hash. Got %s, wanted %s, hash - %s", result, wanted, hash)
+		}
+	})
+
+	t.Run("TestHashNotFoundSHA1", func(t *testing.T) {
+		wordlist := []string{"a", "b", "c", "d"}
+
+		hash := "58e6b3a414a1e090dfc6029add0f3555ccba127f" // sha1("e")
+		isFound, result := recoverHash(wordlist, 1, prettyMD5, hash)
+		if isFound || result != "" {
+			t.Errorf(
+				"Found hash which is not in wordlist. Requested hash - %s, result - %s",
+				hash,
+				result,
+			)
+		}
+	})
 }
 
 func TestOneWordSHA256(t *testing.T) {
@@ -56,16 +88,6 @@ func TestOneWordSHA512(t *testing.T) {
 	}
 }
 
-func TestHashNotFoundMD5(t *testing.T) {
-	wordlist := []string{"a", "b", "c", "d"}
-
-	hash := "e1671797c52e15f763380b45e841ec32" // md5("e")
-	isFound, result := recoverHash(wordlist, 1, prettyMD5, hash)
-	if isFound || result != "" {
-		t.Errorf("Found hash which is not in wordlist. Requested hash - %s, result - %s", hash, result)
-	}
-}
-
 func TestEmptyWordlist(t *testing.T) {
 	var wordlist []string
 
@@ -73,5 +95,15 @@ func TestEmptyWordlist(t *testing.T) {
 	isFound, result := recoverHash(wordlist, 1, prettyMD5, hash)
 	if isFound || result != "" {
 		t.Errorf("Found hash in empty wordlist. Requested hash - %s, result - %s", hash, result)
+	}
+}
+
+func TestEmptyWordlistWithOneWord(t *testing.T) {
+	wordlist := []string{"a"}
+
+	hash := "dac0d8a5cf48040d1bb724ea18a4f103" // md5(hashgoat)
+	isFound, result := recoverHash(wordlist, 1, prettyMD5, hash)
+	if isFound || result != "" {
+		t.Errorf("Found hash in wrong wordlist. Requested hash - %s, result - %s", hash, result)
 	}
 }

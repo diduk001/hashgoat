@@ -48,7 +48,9 @@ func main() {
 	case "sha512":
 		hashAlgo = prettySHA512
 	default:
-		fmt.Println("Hash algorithm specified badly! Supported algorithms: md5, sha1, sha256, sha512")
+		fmt.Println(
+			"Hash algorithm specified badly! Supported algorithms: md5, sha1, sha256, sha512",
+		)
 		printExample()
 		return
 	}
@@ -63,7 +65,6 @@ func main() {
 	if err != nil {
 		fmt.Println("Error occurred while reading wordlist")
 		panic(err)
-		return
 	}
 
 	fmt.Printf("hashgoat - trying to recover %s\n", unknownHash)
@@ -79,12 +80,19 @@ func main() {
 func printExample() {
 	fmt.Println("Example:")
 	fmt.Println("hashgoat -w wordlist.txt -a md5 dac0d8a5cf48040d1bb724ea18a4f103")
-	fmt.Println("hashgoat -w wordlist.txt -t 1 -a sha256 4e6dc79b64c40a1d2867c7e26e7856404db2a97c1d5854c3b3ae5c6098a61c62")
+	fmt.Println(
+		"hashgoat -w wordlist.txt -t 1 -a sha256 4e6dc79b64c40a1d2867c7e26e7856404db2a97c1d5854c3b3ae5c6098a61c62",
+	)
 	fmt.Println()
 	fmt.Println("More info: https://github.com/diduk001/hashgoat")
 }
 
-func recoverHash(lines []string, threadsCnt int, hashFunction func(string) string, unknownHash string) (bool, string) {
+func recoverHash(
+	lines []string,
+	threadsCnt int,
+	hashFunction func(string) string,
+	unknownHash string,
+) (bool, string) {
 	numLines := len(lines)
 
 	if numLines == 0 {
@@ -145,7 +153,13 @@ func recoverHash(lines []string, threadsCnt int, hashFunction func(string) strin
 }
 
 // Put pairs {hashed, plain} for passed hashFunction into pairs channel until all lines from slice is hashed or done channel is closed
-func hashSlice(wordlist []string, wg *sync.WaitGroup, pairs chan<- pair, done <-chan struct{}, hashFunction func(string) string) {
+func hashSlice(
+	wordlist []string,
+	wg *sync.WaitGroup,
+	pairs chan<- pair,
+	done <-chan struct{},
+	hashFunction func(string) string,
+) {
 	defer wg.Done()
 	if len(wordlist) == 0 {
 		return
@@ -177,6 +191,7 @@ func prettySHA1(s string) string {
 func prettySHA256(s string) string {
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(s)))
 }
+
 func prettySHA512(s string) string {
 	return fmt.Sprintf("%x", sha512.Sum512([]byte(s)))
 }
