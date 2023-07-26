@@ -61,7 +61,7 @@ func main() {
 		return
 	}
 
-	lines, err := readLines(*wordlistPtr)
+	lines, err := readLinesToList(*wordlistPtr)
 	if err != nil {
 		fmt.Println("Error occurred while reading wordlist")
 		panic(err)
@@ -69,7 +69,7 @@ func main() {
 
 	fmt.Printf("hashgoat - trying to recover %s\n", unknownHash)
 
-	isFound, result := recoverHash(lines, *threadsCntPtr, hashAlgo, unknownHash)
+	isFound, result := recoverHashFromSlice(lines, *threadsCntPtr, hashAlgo, unknownHash)
 	if isFound {
 		fmt.Printf("Result: %s\n", result)
 	} else {
@@ -87,7 +87,7 @@ func printExample() {
 	fmt.Println("More info: https://github.com/diduk001/hashgoat")
 }
 
-func recoverHash(
+func recoverHashFromSlice(
 	lines []string,
 	threadsCnt int,
 	hashFunction func(string) string,
@@ -196,7 +196,7 @@ func prettySHA512(s string) string {
 	return fmt.Sprintf("%x", sha512.Sum512([]byte(s)))
 }
 
-func readLines(filename string) ([]string, error) {
+func readLinesToList(filename string) ([]string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
