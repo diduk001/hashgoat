@@ -16,6 +16,8 @@ func main() {
 	wordlistPtr := flag.String("w", "", "Path to wordlist")
 	threadsCntPtr := flag.Int("t", 10, "Number of threadsCnt")
 	hashAlgoPtr := flag.String("a", "", "Hashing algorithm (md5/sha1/sha256/sha512)")
+	isSync := flag.Bool("sync", false, "Read file, then hash each line (slower, uses more memory)")
+
 	flag.Usage = printExample // Override standard usage
 	flag.Parse()
 
@@ -61,9 +63,16 @@ func main() {
 		return
 	}
 
-	fmt.Printf("hashgoat - trying to recover %s\n TESTING ASYNC I/O FEATURE!\n", unknownHash)
+	fmt.Printf("hashgoat - trying to recover %s\n", unknownHash)
 
-	isFound, result := runAsync(*wordlistPtr, hashAlgo, unknownHash)
+	var isFound bool
+	var result string
+	if *isSync {
+		isFound, result = runSync(*wordlistPtr, *threadsCntPtr, hashAlgo, unknownHash)
+	} else {
+		isFound, result = runAsync(*wordlistPtr, hashAlgo, unknownHash)
+	}
+
 	if isFound {
 		fmt.Printf("Result: %s\n", result)
 	} else {
@@ -73,12 +82,22 @@ func main() {
 
 func printExample() {
 	fmt.Println("Example:")
-	fmt.Println("hashgoat -w wordlist.txt -a md5 dac0d8a5cf48040d1bb724ea18a4f103")
+	fmt.Println("hashgoat -w wordlist.txt -a md5 -sync dac0d8a5cf48040d1bb724ea18a4f103")
 	fmt.Println(
 		"hashgoat -w wordlist.txt -t 1 -a sha256 4e6dc79b64c40a1d2867c7e26e7856404db2a97c1d5854c3b3ae5c6098a61c62",
 	)
 	fmt.Println()
 	fmt.Println("More info: https://github.com/diduk001/hashgoat")
+}
+
+func runSync(wordlistFilename string, threadsCnt int, hashFunction func(string) string, unknownHash string) (bool, string) {
+	lines, err := readLinesToList(wordlistFilename)
+	if err != nil {
+		fmt.Println("Error occurred while reading wordlist")
+		panic(err)
+	}
+	isFound, result := recoverHashFromSlice(lines, threadsCnt, hashFunction, unknownHash)
+	return isFound, result
 }
 
 func runAsync(wordlistFilename string, hashFunction func(string) string, unknownHash string) (bool, string) {
