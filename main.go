@@ -90,6 +90,7 @@ func printExample() {
 	fmt.Println("More info: https://github.com/diduk001/hashgoat")
 }
 
+// Hash lines after reading all file
 func runSync(wordlistFilename string, threadsCnt int, hashFunction func(string) string, unknownHash string) (bool, string) {
 	lines, err := readLinesToList(wordlistFilename)
 	if err != nil {
@@ -100,6 +101,7 @@ func runSync(wordlistFilename string, threadsCnt int, hashFunction func(string) 
 	return isFound, result
 }
 
+// Read file and hash lines simultaneously using goroutines and channels
 func runAsync(wordlistFilename string, hashFunction func(string) string, unknownHash string) (bool, string) {
 	lines := make(chan string)
 	linesDone := make(chan struct{})
@@ -118,6 +120,7 @@ func runAsync(wordlistFilename string, hashFunction func(string) string, unknown
 	}
 }
 
+// Recover hash using slice of plaintext lines
 func recoverHashFromSlice(
 	lines []string,
 	threadsCnt int,
@@ -183,6 +186,7 @@ func recoverHashFromSlice(
 	}
 }
 
+// Recover hash using channel with plaintext lines
 func recoverHashFromChan(
 	linesChan <-chan string,
 	linesDoneChan <-chan struct{},
@@ -262,6 +266,7 @@ func prettySHA512(s string) string {
 	return fmt.Sprintf("%x", sha512.Sum512([]byte(s)))
 }
 
+// Read lines from file and put them to slice
 func readLinesToList(filename string) ([]string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
@@ -281,6 +286,7 @@ func readLinesToList(filename string) ([]string, error) {
 	return lines, nil
 }
 
+// Read lines and put them to channel
 func readLinesToChan(filename string, lines chan<- string, linesDone chan<- struct{}) {
 	file, err := os.Open(filename)
 	if err != nil {
