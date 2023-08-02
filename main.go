@@ -61,15 +61,9 @@ func main() {
 		return
 	}
 
-	lines, err := readLinesToList(*wordlistPtr)
-	if err != nil {
-		fmt.Println("Error occurred while reading wordlist")
-		panic(err)
-	}
+	fmt.Printf("hashgoat - trying to recover %s\n TESTING ASYNC I/O FEATURE!\n", unknownHash)
 
-	fmt.Printf("hashgoat - trying to recover %s\n", unknownHash)
-
-	isFound, result := recoverHashFromSlice(lines, *threadsCntPtr, hashAlgo, unknownHash)
+	isFound, result := runAsync(*wordlistPtr, hashAlgo, unknownHash)
 	if isFound {
 		fmt.Printf("Result: %s\n", result)
 	} else {
@@ -85,6 +79,24 @@ func printExample() {
 	)
 	fmt.Println()
 	fmt.Println("More info: https://github.com/diduk001/hashgoat")
+}
+
+func runAsync(wordlistFilename string, hashFunction func(string) string, unknownHash string) (bool, string) {
+	lines := make(chan string)
+	linesDone := make(chan struct{})
+	hashResultChan := make(chan string)
+
+	go readLinesToChan(wordlistFilename, lines, linesDone)
+	go recoverHashFromChan(lines, linesDone, hashFunction, unknownHash, hashResultChan)
+
+	select {
+	case result := <-hashResultChan:
+		if result == "" {
+			return false, ""
+		} else {
+			return true, result
+		}
+	}
 }
 
 func recoverHashFromSlice(
@@ -152,6 +164,41 @@ func recoverHashFromSlice(
 	}
 }
 
+func recoverHashFromChan(
+	linesChan <-chan string,
+	linesDoneChan <-chan struct{},
+	hashFunction func(string) string,
+	unknownHash string,
+	hashResultChan chan string,
+) {
+	pairs := make(chan pair)
+
+	go func() {
+		for {
+			select {
+			case <-linesDoneChan:
+				return
+			case line := <-linesChan:
+				hashedLine := hashFunction(line)
+				pairs <- pair{line, hashedLine}
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case curPair := <-pairs:
+				if curPair.hash == unknownHash {
+					hashResultChan <- curPair.plain
+					close(hashResultChan)
+					return
+				}
+			}
+		}
+	}()
+}
+
 // Put pairs {hashed, plain} for passed hashFunction into pairs channel until all lines from slice is hashed or done channel is closed
 func hashSlice(
 	wordlist []string,
@@ -213,4 +260,21 @@ func readLinesToList(filename string) ([]string, error) {
 		return nil, err
 	}
 	return lines, nil
+}
+
+func readLinesToChan(filename string, lines chan<- string, linesDone chan<- struct{}) {
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Println("Error during opening file")
+		panic(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		lines <- line
+	}
+
+	close(linesDone)
 }
