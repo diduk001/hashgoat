@@ -12,7 +12,7 @@
 
 ## Usage
 
-`hashgoat -w path-to-wordlist -a hashing-algorithm [-t number-of-threads] unknown-hash`
+`hashgoat -w path-to-wordlist -a hashing-algorithm [-t number-of-threads] [-sync] unknown-hash`
 
 Currently implemented hashing algorithms:
 - MD5 (`md5`)
@@ -20,10 +20,13 @@ Currently implemented hashing algorithms:
 - SHA256 (`sha256`)
 - SHA512 (`sha512`)
 
+`-sync` is an option for synchronous file reading. By default, hashgoat reads and hashes simultaneously using goroutines
+
+
 ## Examples
 
 ```
-hashgoat -w wordlist.txt -a md5 dac0d8a5cf48040d1bb724ea18a4f103
+hashgoat -w wordlist.txt -a md5 -sync dac0d8a5cf48040d1bb724ea18a4f103
 hashgoat -w wordlist.txt -t 1 -a sha256 4e6dc79b64c40a1d2867c7e26e7856404db2a97c1d5854c3b3ae5c6098a61c62
 ```
 
@@ -33,9 +36,9 @@ hashgoat -w wordlist.txt -t 1 -a sha256 4e6dc79b64c40a1d2867c7e26e7856404db2a97c
 
 ✅ Add basic hash algorithms (MD5, SHA1, SHA256, SHA512)
 
-⬜ Add unit tests (IN PROGRESS)
+✅ Add asynchronous I/O
 
-⬜ Add asynchronous I/O
+⬜ Add unit tests (IN PROGRESS)
 
 ⬜ Add progress bar
 
