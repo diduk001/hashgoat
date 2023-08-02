@@ -13,9 +13,9 @@ import (
 )
 
 func main() {
-	wordlistPtr := flag.String("w", "", "Path to wordlist")
-	threadsCntPtr := flag.Int("t", 10, "Number of threadsCnt")
-	hashAlgoPtr := flag.String("a", "", "Hashing algorithm (md5/sha1/sha256/sha512)")
+	wordlistFilenamePtr := flag.String("w", "", "Path to wordlist")
+	threadsCntPtr := flag.Int("t", 10, "Number of threadsCnt") // Threads are not used in async mode!
+	hashFunctionPtr := flag.String("a", "", "Hashing algorithm (md5/sha1/sha256/sha512)")
 	isSync := flag.Bool("sync", false, "Read file, then hash each line (slower, uses more memory)")
 
 	flag.Usage = printExample // Override standard usage
@@ -23,7 +23,7 @@ func main() {
 
 	unknownHash := flag.Arg(0)
 
-	if *wordlistPtr == "" {
+	if *wordlistFilenamePtr == "" {
 		fmt.Println("Wordlist filename (-w) is not specified!")
 		printExample()
 		return
@@ -35,20 +35,20 @@ func main() {
 		return
 	}
 
-	var hashAlgo func(string) string // Hashing algorithm
-	switch *hashAlgoPtr {
+	var hashFunction func(string) string // Hashing algorithm
+	switch *hashFunctionPtr {
 	case "":
 		fmt.Println("Hash not specified!")
 		printExample()
 		return
 	case "md5":
-		hashAlgo = prettyMD5
+		hashFunction = prettyMD5
 	case "sha1":
-		hashAlgo = prettySHA1
+		hashFunction = prettySHA1
 	case "sha256":
-		hashAlgo = prettySHA256
+		hashFunction = prettySHA256
 	case "sha512":
-		hashAlgo = prettySHA512
+		hashFunction = prettySHA512
 	default:
 		fmt.Println(
 			"Hash algorithm specified badly! Supported algorithms: md5, sha1, sha256, sha512",
@@ -68,9 +68,9 @@ func main() {
 	var isFound bool
 	var result string
 	if *isSync {
-		isFound, result = runSync(*wordlistPtr, *threadsCntPtr, hashAlgo, unknownHash)
+		isFound, result = runSync(*wordlistFilenamePtr, *threadsCntPtr, hashFunction, unknownHash)
 	} else {
-		isFound, result = runAsync(*wordlistPtr, hashAlgo, unknownHash)
+		isFound, result = runAsync(*wordlistFilenamePtr, hashFunction, unknownHash)
 	}
 
 	if isFound {
@@ -92,7 +92,7 @@ func printExample() {
 
 // Hash lines after reading all file
 func runSync(wordlistFilename string, threadsCnt int, hashFunction func(string) string, unknownHash string) (bool, string) {
-	lines, err := readLinesToList(wordlistFilename)
+	lines, err := readLinesToSlice(wordlistFilename)
 	if err != nil {
 		fmt.Println("Error occurred while reading wordlist")
 		panic(err)
@@ -122,17 +122,17 @@ func runAsync(wordlistFilename string, hashFunction func(string) string, unknown
 
 // Recover hash using slice of plaintext lines
 func recoverHashFromSlice(
-	lines []string,
+	wordlistLines []string,
 	threadsCnt int,
 	hashFunction func(string) string,
 	unknownHash string,
 ) (bool, string) {
-	numLines := len(lines)
+	numLines := len(wordlistLines)
 
 	if numLines == 0 {
 		return false, ""
 	} else if numLines == 1 {
-		line := lines[0]
+		line := wordlistLines[0]
 		hash := hashFunction(line)
 		if hash == unknownHash {
 			return true, line
@@ -158,7 +158,7 @@ func recoverHashFromSlice(
 		if i == threadsCnt-1 { // Add the end of wordlist on last iteration
 			sliceEnd = numLines
 		}
-		slice := lines[sliceStart:sliceEnd]
+		slice := wordlistLines[sliceStart:sliceEnd]
 		go hashSlice(slice, &wg, hashPairs, isDone, hashFunction) // Start hashing goroutine
 	}
 
@@ -188,31 +188,31 @@ func recoverHashFromSlice(
 
 // Recover hash using channel with plaintext lines
 func recoverHashFromChan(
-	linesChan <-chan string,
-	linesDoneChan <-chan struct{},
+	wordlistLinesChan <-chan string,
+	wordlistLinesDoneChan <-chan struct{},
 	hashFunction func(string) string,
 	unknownHash string,
 	hashResultChan chan string,
 ) {
-	pairs := make(chan pair)
+	hashPairs := make(chan pair)
 
 	go func() {
 		for {
 			select {
-			case <-linesDoneChan:
+			case <-wordlistLinesDoneChan: // if all file is read
 				return
-			case line := <-linesChan:
+			case line := <-wordlistLinesChan: // else, hash line and put pair in the channel
 				hashedLine := hashFunction(line)
-				pairs <- pair{line, hashedLine}
+				hashPairs <- pair{line, hashedLine}
 			}
 		}
 	}()
 
 	go func() {
-		for {
+		for { // constantly waiting for new pairs
 			select {
-			case curPair := <-pairs:
-				if curPair.hash == unknownHash {
+			case curPair := <-hashPairs:
+				if curPair.hash == unknownHash { // check pair
 					hashResultChan <- curPair.plain
 					close(hashResultChan)
 					return
@@ -224,18 +224,18 @@ func recoverHashFromChan(
 
 // Put pairs {hashed, plain} for passed hashFunction into pairs channel until all lines from slice is hashed or done channel is closed
 func hashSlice(
-	wordlist []string,
+	wordlistLines []string,
 	wg *sync.WaitGroup,
 	pairs chan<- pair,
 	done <-chan struct{},
 	hashFunction func(string) string,
 ) {
 	defer wg.Done()
-	if len(wordlist) == 0 {
+	if len(wordlistLines) == 0 {
 		return
 	}
 
-	for _, line := range wordlist {
+	for _, line := range wordlistLines {
 		hash := hashFunction(line)
 		select {
 		case pairs <- pair{line, hash}:
@@ -267,7 +267,7 @@ func prettySHA512(s string) string {
 }
 
 // Read lines from file and put them to slice
-func readLinesToList(filename string) ([]string, error) {
+func readLinesToSlice(filename string) ([]string, error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
