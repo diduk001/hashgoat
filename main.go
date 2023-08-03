@@ -14,9 +14,9 @@ import (
 
 func main() {
 	wordlistFilenamePtr := flag.String("w", "", "Path to wordlist")
-	threadsCntPtr := flag.Int("t", 10, "Number of threadsCnt") // Threads are not used in async mode!
+	threadsCntPtr := flag.Int("t", 10, "Number of threads. Async mode doesn't use threads!")
 	hashFunctionPtr := flag.String("a", "", "Hashing algorithm (md5/sha1/sha256/sha512)")
-	isSync := flag.Bool("sync", false, "Read file, then hash each line (slower, uses more memory)")
+	isSync := flag.Bool("sync", false, "Read file, then hash each line (slower, uses more memory for big files)")
 
 	flag.Usage = printExample // Override standard usage
 	flag.Parse()
@@ -200,6 +200,7 @@ func recoverHashFromChan(
 		for {
 			select {
 			case <-wordlistLinesDoneChan: // if all file is read
+				close(hashPairs)
 				return
 			case line := <-wordlistLinesChan: // else, hash line and put pair in the channel
 				hashedLine := hashFunction(line)
@@ -209,16 +210,16 @@ func recoverHashFromChan(
 	}()
 
 	go func() {
-		for { // constantly waiting for new pairs
-			select {
-			case curPair := <-hashPairs:
-				if curPair.hash == unknownHash { // check pair
-					hashResultChan <- curPair.plain
-					close(hashResultChan)
-					return
-				}
+		for curPair := range hashPairs { // iterate over pairs
+			if curPair.hash == unknownHash { // check pair
+				hashResultChan <- curPair.plain
+				close(hashResultChan)
+				return
 			}
 		}
+		// haven't found any plain to match unknownHash
+		hashResultChan <- ""
+		close(hashResultChan)
 	}()
 }
 
